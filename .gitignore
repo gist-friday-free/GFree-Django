@@ -1,5 +1,6 @@
 #Custom
 urls.py
+settings.py
 
 
 # Created by https://www.gitignore.io/api/django
