@@ -81,6 +81,45 @@ class Class(models.Model):
     def __str__(self):
         return self.name
 
+class ClassTemp(models.Model):
+    year = models.IntegerField()
+    semester = models.IntegerField(choices=[(semester.value, semester.name) for semester in SemesterChoices])
+    name = models.CharField(max_length=50)
+    code = models.CharField(max_length=20)
+    professor = models.CharField(max_length=50)
+    place = models.CharField(max_length=50)
+    size = models.IntegerField()
+
+    grade = models.IntegerField(choices=[(grade.value, grade.name) for grade in GradeChoices])
+
+    start1 = models.TimeField(null=True, blank=True)
+    end1 = models.TimeField(null=True, blank=True)
+    week1 = models.CharField(max_length=20, choices=[(week.value, week.name) for week in WeekChoices], null=True,
+                             blank=True)
+
+    start2 = models.TimeField(null=True, blank=True)
+    end2 = models.TimeField(null=True, blank=True)
+    week2 = models.CharField(max_length=20, choices=[(week.value, week.name) for week in WeekChoices], null=True,
+                             blank=True)
+
+    start3 = models.TimeField(null=True, blank=True)
+    end3 = models.TimeField(null=True, blank=True)
+    week3 = models.CharField(max_length=20, choices=[(week.value, week.name) for week in WeekChoices], null=True,
+                             blank=True)
+
+    start4 = models.TimeField(null=True, blank=True)
+    end4 = models.TimeField(null=True, blank=True)
+    week4 = models.CharField(max_length=20, choices=[(week.value, week.name) for week in WeekChoices], null=True,
+                             blank=True)
+
+    start5 = models.TimeField(null=True, blank=True)
+    end5 = models.TimeField(null=True, blank=True)
+    week5 = models.CharField(max_length=20, choices=[(week.value, week.name) for week in WeekChoices], null=True,
+                             blank=True)
+
+    def __str__(self):
+        return self.name
+
 
 class User(models.Model):
     uid = models.CharField(max_length=100, primary_key=True)

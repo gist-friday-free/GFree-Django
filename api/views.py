@@ -1,5 +1,9 @@
+import string
+
+from django.db.models import Q
 from rest_framework import generics, mixins, status
 from rest_framework.decorators import api_view
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import JSONParser
 from rest_framework.renderers import JSONRenderer
 from rest_framework.request import Request
@@ -37,42 +41,62 @@ def api_root(request, format=None):
     })
 
 
-class ClassList(generics.GenericAPIView,
-                mixins.CreateModelMixin):
+class ClassList(generics.ListCreateAPIView):
+    serializer_class = ClassSerializer
+    pagination_class = PageNumberPagination
+
+    def get_queryset(self):
+        year = self.request.query_params.get('year')
+        semester = self.request.query_params.get('semester')
+        return Class.objects.filter(year__exact=year,semester__exact=semester)
+
+
+
+class ClassDetail(generics.GenericAPIView, mixins.RetrieveModelMixin, mixins.UpdateModelMixin,
+                  mixins.DestroyModelMixin):
     queryset = Class.objects.all()
     serializer_class = ClassSerializer
 
-    def get(self, request: Request, *args, **kwargs):
+    def get(self, request: Request, pk, *args, **kwargs):
+        return Response(self.serializer_class(instance=self.queryset.get(pk__exact=pk)).data)
+
+    def put(self, request: Request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+    def delete(self, request: Request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
+
+
+class ClassDetailCode(APIView):
+
+    def get(self, request: Request, code, *args, **kwargs):
         year = request.query_params.get('year')
         semester = request.query_params.get('semester')
 
-        code = request.query_params.get('code')
-
-        if not year or not semester:
+        if year is None or semester is None:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
-        result = self.queryset.filter(year__exact=year).filter(semester__exact=semester)
+        print(code)
+        try:
+            _class = Class.objects.get(
+                Q(code__iexact=code) &
+                Q(year__exact=year) &
+                Q(semester__exact=semester)
+            )
+            return Response(ClassSerializer(instance=_class).data)
+        except:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
-        # 코드가 존재한다면 일치하는 코드 1개 혹은 없는 것을 반환
-        if code is not None:
-            classData = result.filter(code__exact=code)
-            if classData.exists():
-                serializer: ClassSerializer = self.serializer_class(instance=result.get(code__exact=code))
-                return Response(serializer.data)
-            else:
-                return Response(status=status.HTTP_404_NOT_FOUND)
-
-        else:
-            serializer: ClassSerializer = self.serializer_class(instance=result, many=True)
-            return Response(serializer.data)
-
-    def post(self, request: Request, *args, **kwargs):
-        return self.create(request, *args, **kwargs)
+    # return Response(ClassSerializer(instance=Class.objects.get(
+    #     Q(code__exact=code) and
+    #     Q(year__exact=year) and
+    #     Q(semester__exact=semester)
+    # )).data)
 
 
-class ClassDetail(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Class.objects.all()
-    serializer_class = ClassSerializer
+# class ClassDetail(generics.RetrieveUpdateDestroyAPIView):
+#     queryset = Class.objects.all()
+#     serializer_class = ClassSerializer
 
 
 class ClassDetailUsers(APIView):
@@ -113,14 +137,13 @@ class EditList(generics.GenericAPIView, mixins.CreateModelMixin, mixins.DestroyM
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
         if code is not None:
-            edits = self.queryset.filter(editClass__code__exact=code,year__exact=year,semester__exact=semester)
+            edits = self.queryset.filter(editClass__code__exact=code, year__exact=year, semester__exact=semester)
             serializer = EditSerializer(instance=edits.all(), many=True)
             return Response(serializer.data)
         else:
             edits = self.queryset.filter(year__exact=year, semester__exact=semester)
             serializer = EditSerializer(instance=edits.all(), many=True)
             return Response(serializer.data)
-
 
     def post(self, request: Request, *args, **kwargs):
         print(request.body)
@@ -129,9 +152,10 @@ class EditList(generics.GenericAPIView, mixins.CreateModelMixin, mixins.DestroyM
     def delete(self, request, *args, **kwargs):
         return self.destroy(request, *args, **kwargs)
 
+
 class EditDetail(APIView):
 
-    def put(self, request : Request, pk:int):
+    def put(self, request: Request, pk: int):
         add = request.query_params.get('add')
         uid = request.query_params.get('uid')
 
@@ -148,16 +172,16 @@ class EditDetail(APIView):
             edit.star.remove(user)
         print(edit.star.all())
 
-
         return Response(EditSerializer(instance=edit).data)
+
 
 class EditUserList(APIView):
 
-    def get(self, request : Request, pk : int,*args, **kwargs):
-        edit:Edit = Edit.objects.get(pk__exact=pk)
-        users=edit.star.all()
+    def get(self, request: Request, pk: int, *args, **kwargs):
+        edit: Edit = Edit.objects.get(pk__exact=pk)
+        users = edit.star.all()
 
-        return Response(UserSerializer(instance = users, many=True).data)
+        return Response(UserSerializer(instance=users, many=True).data)
 
 
 class UserList(generics.ListCreateAPIView):
